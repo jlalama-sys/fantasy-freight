@@ -118,22 +118,18 @@ async function sha256(msg){
 function jsonp(params) {
   return new Promise(function(resolve, reject) {
     var cbName = 'ff_cb_' + Math.random().toString(36).slice(2);
-    var url = API_URL + '?callback=' + cbName;
-    for (var k in params) {
-      url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(
-        typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k]
-      );
-    }
+    // Send entire payload as single encoded 'payload' param to avoid redirect stripping
+    var url = API_URL + '?callback=' + cbName + '&payload=' + encodeURIComponent(JSON.stringify(params));
     window[cbName] = function(data) {
       delete window[cbName];
-      document.body.removeChild(script);
+      if(script.parentNode) document.body.removeChild(script);
       resolve(data);
     };
     var script = document.createElement('script');
     script.src = url;
     script.onerror = function() {
       delete window[cbName];
-      document.body.removeChild(script);
+      if(script.parentNode) document.body.removeChild(script);
       reject(new Error('JSONP request failed'));
     };
     document.body.appendChild(script);
