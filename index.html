@@ -177,8 +177,8 @@ function renderPinPrompt(){
     '<p style="color:var(--text-dim);font-size:13px;text-align:center;margin-top:0;">Signing in as <strong style="color:var(--accent)">'+state.pendingCode+'</strong></p>'+
     (locked
       ? '<div class="attempts-warn">Too many attempts - refresh and try again.</div>'
-      : '<label>4-digit PIN</label>'+
-        '<input type="password" id="pi" maxlength="4" placeholder="&bull;&bull;&bull;&bull;" autocomplete="off" inputmode="numeric" style="font-size:24px;text-align:center;letter-spacing:8px;" />'+
+      : '<label>PIN</label>'+
+        '<input type="password" id="pi" maxlength="20" placeholder="&bull;&bull;&bull;&bull;" autocomplete="off" style="font-size:24px;text-align:center;letter-spacing:8px;" />'+
         '<div class="error-msg" id="pe" style="display:none;"></div>'+
         (state.pinAttempts > 0 ? '<div class="attempts-warn">'+state.pinAttempts+' failed attempt(s). '+(5-state.pinAttempts)+' remaining.</div>' : '')+
         '<div class="row"><button class="btn ghost" id="cb">Back</button><div style="flex:1"></div><button class="btn" id="sb">Unlock</button></div>'
@@ -217,7 +217,7 @@ function bindLogout(){
 }
 
 async function renderManager(){
-  var manager=state.user, reps=REPS_BY_MANAGER[manager]||[], week=state.viewingWeek, canEdit=week===CURRENT_WEEK;
+  var manager=state.user, reps=REPS_BY_MANAGER[manager]||[], week=state.viewingWeek, canEdit=true;
   var tabs = '';
   for(var w=1;w<=TOTAL_WEEKS;w++){
     var dot = w===CURRENT_WEEK ? '<div style="position:absolute;top:3px;right:6px;width:6px;height:6px;border-radius:50%;background:'+(w===week?'#1a1206':'var(--accent)')+'"></div>' : '';
@@ -251,8 +251,7 @@ async function renderManager(){
   document.getElementById('mainCard').innerHTML =
     '<div class="matchup">'+(opp?'<b>Week '+week+'</b> &middot; vs <b>'+opp.opponent+'</b>'+(opp.division&&opp.division.indexOf('RIVALRY')>=0?' <span class="vs">&#9876; RIVALRY WEEK</span>':''):'<b>Week '+week+'</b>')+'</div>'+
     (alreadySubmitted?'<div class="submitted-badge">&#10003; Roster submitted</div>':'')+
-    (!canEdit&&alreadySubmitted?'<div class="read-only-note">Past week - roster locked.</div>':'')+
-    (!canEdit&&!alreadySubmitted?'<div class="read-only-note">Submissions only open for current week (Week '+CURRENT_WEEK+').</div>':'')+
+
     (canEdit&&lockedReps.size>0?'<div class="locked-note">Reps grayed out played Week '+(week-1)+' and cannot be re-selected this week.</div>':'')+
     '<div class="replist">'+chipsHtml+'</div>'+
     '<div class="counter '+(selCount===7?'ok':'warn')+'">'+selCount+' / 7 selected</div>'+
