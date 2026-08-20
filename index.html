@@ -117,7 +117,7 @@ const SEASON_START = new Date('2026-09-21T00:00:00');
 
 // ⚠️ PASTE YOUR APPS SCRIPT URL HERE after deploying
 // It looks like: https://script.google.com/macros/s/ABC123.../exec
-const API_URL = https://script.google.com/a/macros/arrivelogistics.com/s/AKfycbwW24nLEYDLeIGtbOWusUPtyR10aXDYOctsV3CooVITTkdaMTJRHvbVUpfhdcOVpBg/exec;
+const API_URL = 'https://script.google.com/a/macros/arrivelogistics.com/s/AKfycbwW24nLEYDLeIGtbOWusUPtyR10aXDYOctsV3CooVITTkdaMTJRHvbVUpfhdcOVpBg/exec';
 
 function getCurrentWeek(){
   const now = new Date();
@@ -137,7 +137,7 @@ let state = {
 };
 
 const app = document.getElementById('app');
-const apiReady = API_URL !== 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
+const apiReady = API_URL !== 'https://script.google.com/a/macros/arrivelogistics.com/s/AKfycbwW24nLEYDLeIGtbOWusUPtyR10aXDYOctsV3CooVITTkdaMTJRHvbVUpfhdcOVpBg/exec';
 
 // ---------- API ----------
 async function apiCall(body){
