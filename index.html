@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fantasy Freight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f151c;--panel:#182029;--panel-2:#1f2933;--panel-3:#26313d;--line:#31404f;
+    --text:#eef2f6;--text-dim:#8fa0b0;--accent:#ffb020;--accent-dim:#7a5a1f;
+    --good:#3fcf8e;--good-bg:#173327;--warn:#f2c14e;--warn-bg:#332c15;
+    --bad:#ef5c73;--bad-bg:#33161d;--radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;}
+  .wrap{max-width:1100px;margin:0 auto;padding:28px 20px 60px;}
+  .brand{display:flex;align-items:center;gap:14px;margin-bottom:28px;}
+  .shield{width:52px;height:58px;background:linear-gradient(160deg,var(--accent),#c97e0e);
+    clip-path:polygon(0 0,100% 0,100% 62%,50% 100%,0 62%);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .shield span{font-family:'Oswald',sans-serif;font-weight:700;color:#1a1206;font-size:20px;}
+  .brand h1{font-family:'Oswald',sans-serif;font-weight:700;font-size:28px;margin:0;text-transform:uppercase;}
+  .brand .sub{color:var(--text-dim);font-size:13px;margin-top:2px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:24px;margin-bottom:20px;}
+  .btn{font-family:'Inter',sans-serif;font-weight:600;font-size:14px;background:var(--accent);color:#1a1206;
+    border:none;border-radius:8px;padding:11px 20px;cursor:pointer;}
+  .btn:hover{background:#ffc250;}
+  .btn:disabled{background:var(--panel-3);color:var(--text-dim);cursor:not-allowed;}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--text);}
+  .btn.ghost:hover{border-color:var(--accent);color:var(--accent);}
+  .btn.small{padding:6px 12px;font-size:12px;border-radius:6px;}
+  select,input{font-family:'JetBrains Mono',monospace;font-size:14px;
+    background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    border-radius:8px;padding:10px 12px;width:100%;}
+  label{font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;}
+  .login-box{max-width:420px;margin:80px auto 0;}
+  .login-box h2{font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:20px;margin-top:0;}
+  .row{display:flex;gap:10px;align-items:flex-end;margin-top:14px;}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+  .whoami{font-family:'JetBrains Mono',monospace;color:var(--accent);font-weight:700;font-size:15px;}
+  .weektabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+  .weektab{font-family:'Oswald',sans-serif;font-weight:600;font-size:13px;
+    width:56px;height:50px;display:flex;align-items:center;justify-content:center;
+    background:var(--panel-2);border:1px solid var(--line);color:var(--text-dim);
+    clip-path:polygon(0 0,100% 0,100% 68%,50% 100%,0 68%);cursor:pointer;padding-bottom:6px;position:relative;}
+  .weektab.active{background:linear-gradient(160deg,var(--accent),#c97e0e);color:#1a1206;border-color:var(--accent);}
+  .matchup{display:flex;align-items:center;gap:10px;color:var(--text-dim);font-size:13px;margin-bottom:16px;font-family:'JetBrains Mono',monospace;}
+  .matchup b{color:var(--text);}
+  .vs{color:var(--accent);font-weight:700;}
+  .locked-note{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--text-dim);margin-bottom:14px;}
+  .replist{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin-bottom:18px;}
+  .repchip{display:flex;align-items:center;gap:9px;font-family:'JetBrains Mono',monospace;font-size:13px;
+    background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;user-select:none;}
+  .repchip:hover:not(.locked){border-color:var(--accent-dim);}
+  .repchip.checked{background:var(--good-bg);border-color:var(--good);}
+  .repchip.locked{opacity:0.45;cursor:not-allowed;text-decoration:line-through;}
+  .repchip input{accent-color:var(--accent);width:15px;height:15px;flex-shrink:0;}
+  .counter{font-family:'Oswald',sans-serif;font-size:15px;margin-bottom:14px;}
+  .counter.ok{color:var(--good);} .counter.warn{color:var(--warn);}
+  .footer-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+  .synctag{font-size:12px;font-family:'JetBrains Mono',monospace;padding:5px 10px;border-radius:6px;display:inline-block;}
+  .synctag.ok{background:var(--good-bg);color:var(--good);}
+  .synctag.err{background:var(--bad-bg);color:var(--bad);}
+  .synctag.pending{background:var(--warn-bg);color:var(--warn);}
+  .progressrow{display:flex;gap:6px;margin-top:16px;flex-wrap:wrap;}
+  .pchip{width:34px;height:34px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+    font-family:'Oswald',sans-serif;font-size:12px;font-weight:600;border:1px solid var(--line);}
+  .pchip.full{background:var(--good-bg);color:var(--good);border-color:var(--good);}
+  .pchip.partial{background:var(--warn-bg);color:var(--warn);border-color:var(--warn);}
+  .pchip.empty{background:var(--bad-bg);color:var(--bad);border-color:var(--bad);}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:9px 10px;text-align:center;border-bottom:1px solid var(--line);}
+  th{font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:11px;color:var(--text-dim);letter-spacing:0.4px;}
+  td.team{text-align:left;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12px;}
+  .cell{border-radius:6px;padding:6px 4px;font-family:'JetBrains Mono',monospace;font-weight:700;cursor:pointer;}
+  .cell.full{background:var(--good-bg);color:var(--good);}
+  .cell.partial{background:var(--warn-bg);color:var(--warn);}
+  .cell.empty{background:var(--bad-bg);color:var(--bad);}
+  .cell small{display:block;font-family:'Inter',sans-serif;font-weight:400;font-size:9px;color:var(--text-dim);margin-top:1px;}
+  .pending-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .pending-pill{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--bad-bg);color:var(--bad);border-radius:20px;padding:5px 12px;}
+  .toolbar{display:flex;gap:10px;justify-content:flex-end;margin-bottom:14px;flex-wrap:wrap;}
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:50;}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;max-width:420px;width:90%;max-height:80vh;overflow:auto;}
+  .modal h3{font-family:'Oswald',sans-serif;text-transform:uppercase;margin-top:0;}
+  .modal .rep-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--panel-2);font-family:'JetBrains Mono',monospace;font-size:13px;}
+  .yes{color:var(--good);} .no{color:var(--text-dim);}
+  .hint{color:var(--text-dim);font-size:12px;margin-top:8px;}
+  .error-msg{color:var(--bad);font-size:13px;margin-top:8px;}
+  .lock-icon{font-size:32px;text-align:center;margin-bottom:12px;}
+  .submitted-badge{display:inline-flex;align-items:center;gap:6px;background:var(--good-bg);color:var(--good);
+    border:1px solid var(--good);border-radius:20px;padding:4px 12px;font-size:12px;font-family:'JetBrains Mono',monospace;margin-bottom:12px;}
+  .read-only-note{background:var(--panel-2);border:1px solid var(--accent-dim);border-radius:8px;
+    padding:10px 14px;font-size:13px;color:var(--warn);margin-bottom:14px;}
+  .attempts-warn{background:var(--bad-bg);border:1px solid var(--bad);border-radius:8px;
+    padding:8px 14px;font-size:12px;color:var(--bad);margin-top:8px;}
+  .setup-banner{background:var(--bad-bg);border:1px solid var(--bad);border-radius:10px;padding:18px 22px;margin-bottom:20px;}
+  .setup-banner h3{font-family:'Oswald',sans-serif;color:var(--bad);margin:0 0 8px;text-transform:uppercase;}
+  .setup-banner code{font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--panel-2);
+    padding:2px 6px;border-radius:4px;color:var(--warn);}
+  a.linklike{color:var(--accent);cursor:pointer;text-decoration:underline;font-size:13px;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>
+const REPS_BY_MANAGER = {"MWIERZEL":["PBASTURK","SVANTLIN","WGARCIA","THANNAHS","PWALASZEK","AOGIBA","JDECKER","PEBBING","ROWENS","LAJOHNSON","CBARDSLEY","RSCHARLAU","KAJHAR","MWIERZEL","AKHALIL","LSPULER","NHOLDER","EANDERSON","SCAREY","GLUST","ADUNAVANT","BROTHGEB","NHAYES","BCITERA","JRLACY","BSOLER","ABYRNE","APETERS"],"JDITTY":["MRICHTER","JBUTLER","TBARBER","SDOHERTY","SCOWMAN","AMILLS","TROMMENEY","CBAER","JDITURI","DSZYDLO","OHICKEY","KGESWEIN","MGARRITY","TATOLARI","JSTROMBERG"],"TMANGOLD":["CJENKINS","MADSMITH","RREYES","DMIRELEZ","JAKIN","GASIMMONS","DPENAFIEL","GLOOPER","LBEAURLINE","IKIBROM","BAN","SZACHARIAS","HGARRISON","PRJONES","LCHEATHAM","JGALENTINE"],"AROGERS":["STIHINEN","IWOLNIEWITZ","BMORRIS","PDITTER","LHOPKINSON","MFREESE","PHANNA","KKOWAL","CBOUKARIM","PCHAMBLESS","KBENGTSON","APERALTA","CMINTURN","JCOLELLA","JWILLIAMS","CKLEIN","KRAY","MKBROWN","SSACK","CPELLECCHIA","BROMAINE","ACICINELLI","TSHOUSE","JENGELBERT","GHILGER","CGIBSON","JEDGE"],"JODELL":["ASCHMID","JMELTON","CLEIB","NVASQUEZ","RDENNY","CCONNORS","RMACLEOD","RLISCHKA","SEGARCIA","DAVMORENO","EISHAM","CLEDESMA","NJELAVICH","CBLIZZARD","ASTOBERT","CBOST","MKASSEBEER","RGILREATH","JROTHSCHILD","JECASTRO","ESANTOS","EBARNARD","JJOHNSON","JHANDLEYKAINER"],"JREECE":["GSCHMIEGEIV","BROWTON","BMORTON","JGRAY","JKNIGHTON","TTRIOLO","TPINKERTON","SWILLIAMS","HTHOMPSON","THAGEN","TMCCARROLL","BBOWEN","JMCCRACKEN","DBOWEN","JAWORTHINGTON","JDZIERWA","HHOVLAND","CSTILWILL","CKELLY","SVANDERBIEST","DSHOEMAKE","ANIERMAN","ANBROWN","EWARD","DOHERN"],"JPASQUALE":["SLEROY","JHALL","JHAVEL","AACKERSON","LETTEFAGH","CMCCHRYSTAL","BSMITH","BHAYES","DJHOWARD","MGOGIN","TWHITTY","ATHOMAS","SBIRD","DKIRKSEY","ASTANCEV","ATOSATTI","DDITTY","RYLEWIS"],"LMAGNOTTI":["CLANGEWISCH","WSMITH","NGOLD","DARMER","DBLANDFORD","ZPIERCE","RELEE","WSTANTON","CGLYNN","LANGIONE","RSAWYER","JHIRSCH","JMORA","RGRUBB","CMORASKA","CWILSON","CMOONEY","MABDELJABER","TTEZAK","CLOEHR","CMATL","JMORRIS","ZMANNING","RKAISER","MSANDLER","PLOGIUDICE","JSULLIVAN","EBEATTY","AVANDIVER","JWEIDLICH","KCOSTNER","TTHOMAS","RAQUIQUE","JOLIVER","GSTRUCK"],"MCURTIS":["RELLINGWOOD","VSERIKOV","AKUZNICKI","MVONAULOCK","JOMOORE","JPASK","MMATHURIN","HBRENNAN","SKONDOR","TIRWIN","MBLINDT","JSZAFRANSKI","MZANE","MDABERKO","BBOWES","TGILMAN","AOCONNOR"],"MMIOTTI":["ROCONNELL","TMCSWEENEY","TJOHNSON","CTOMLIN","JSTACKPOLE","JWARREN","JMANELLO","SBRISON","PBRUMMETT","SEDWARDS","ASNYDER","ELEMKE","GGOLDSMITH","JFEATHERMAN"],"SOSAWA":["DYTHOMPSON","JHARGROVE","JASHMAN","BROZEN","SNUNEZ","TBAGGETT","JPEVANS","CDEEN","MBULL","AMCEACHERN","STEMPLE","JHILAND","AKHALE","MWARNER","CCHANLER","CDUBS","BEHERNANDEZ","LGILLILAND","DHUNT","SHANEY","ERUSSELL","WBRECKENRIDGE","AABREGO"],"EBLANCHET +TPHELPS + KLAGARDE":["ARODRIGUEZSANCHEZ","SMITCHELL","AESTRADA","ALCERVANTES","CPALAFOX","MBAUER","ALSANCHEZ","MRUCKMAN","FERODRIGUEZ","ECOLIN","NJACOB","JOOSANCHEZ","KBUSH","JMCDONOUGH","ABARREDA","JBEALE"],"SCOWIE":["BRWEBB","AFROMM","MFRANKLIN","KHEEBINK","MGILMORE","RCRAIG","EFARMER","MBRASCHI","TFIOCCHI","NADAMS","JDUDA","BMILLER","MBARNES","JLYONS","RSHUMAKER","WHENNESSY","BBOLTER","DAMADOR","ZMYERS","NHROMIDKO"],"MBOZICH":["HPOOLE","BGARRETT","SDUNNE","DSAWYER","CBOHANEK","HKIMBALL","DBRILYAK","DGARCIA","THAMMER","DDUFNER","BDOSSANTOS","MMUSSATTO","RBETOUNI","KSCHACHT","NMIRVISS","EHAYES","KCSMITH","EDOMAGALA","COSTEWART","MCOOK"],"CKASTEN":["MMCINERNEY","AKILBRIDE","LBRUMMETT","RCANTU","HRICHARDSON","NWETMORE","SLAMRIBEN","BALBERT","KWHITLOCK","CWEISS","JGARVEY","COLEWIS","RWELLS","CNOORI","DAGARD","DMARSOLAN","KRUBIN","JOCLARK","JEGARCIA","JWAKEFIELD","TMCKAY","LSOIGNIER","JDENTEN","GBOLAND","TWILKIE","AANDERSON"],"BPHILLIPS":["THHAYES","ADAY","ZPIRKLE","BBOUDREAUX","RHONER","RBLAIR","JPANZER","JDELANGEL","NVALDEZ","NBARTLETT","AHENDERSON","RRICHEY","CBETSEY","DMORTON","BPATACCA","NPOGACNIK","REFIRD","LBREAUX","RTREVINO","DKOKRO","JFARRICIELLI","LHOLMES","ADOMINGUE","DSTUDER","AFUNDERBURK","CTATE","DPRINSEN","BBURTON","CCASEY","MFUCCILLO","LMILES","CBRIMER","MHADDAD","ASTONE","LGARDNER","WAYRES","MHANSEN","AMARTIN"],"DHASSELSON":["HMOSHER","DMANNELLA","JSARLES","NHURLEY","MMCGRAW","LROCHELEMAGNE","TCANTARELLI","NLINN","KSCHROUGHA","CSTRONG","JOJOHNSON","JFYDA","CWETTIG","NHULSHOF","MBETOUNI","KWOLF","LREUTER","VDAIGLER","AHANSON"],"HBUDISH":["DAVGOMEZ","JAMILLER","JBIRTCHER","PPATTERSON","WSCHNEIDERII","CMARKS","BWILLIS","KLEWANDOWSKI","JJOA","DAHUGHES","FECASTRO","MEUBANK","ZBARABASZ","EHINDS","CPETERLIN","BKRUCK","CDEMIK","NHALEY","NLAROSA"]};
+const SCHEDULE = {"AROGERS":{"1":{"opponent":"JODELL","division":"A"},"2":{"opponent":"EBLANCHET +TPHELPS + KLAGARDE","division":"A"},"3":{"opponent":"JPASQUALE","division":"A"},"4":{"opponent":"JREECE","division":"RIVALRY (A vs B)"},"5":{"opponent":"MBOZICH","division":"A"},"6":{"opponent":"DHASSELSON","division":"A"}},"JODELL":{"1":{"opponent":"AROGERS","division":"A"},"2":{"opponent":"JPASQUALE","division":"A"},"3":{"opponent":"DHASSELSON","division":"A"},"4":{"opponent":"MMIOTTI","division":"RIVALRY (C vs A)"},"5":{"opponent":"EBLANCHET +TPHELPS + KLAGARDE","division":"A"},"6":{"opponent":"MBOZICH","division":"A"}},"DHASSELSON":{"1":{"opponent":"EBLANCHET +TPHELPS + KLAGARDE","division":"A"},"2":{"opponent":"MBOZICH","division":"A"},"3":{"opponent":"JODELL","division":"A"},"4":{"opponent":"MCURTIS","division":"RIVALRY (A vs B)"},"5":{"opponent":"JPASQUALE","division":"A"},"6":{"opponent":"AROGERS","division":"A"}},"EBLANCHET +TPHELPS + KLAGARDE":{"1":{"opponent":"DHASSELSON","division":"A"},"2":{"opponent":"AROGERS","division":"A"},"3":{"opponent":"MBOZICH","division":"A"},"4":{"opponent":"HBUDISH","division":"RIVALRY (C vs A)"},"5":{"opponent":"JODELL","division":"A"},"6":{"opponent":"JPASQUALE","division":"A"}},"MBOZICH":{"1":{"opponent":"JPASQUALE","division":"A"},"2":{"opponent":"DHASSELSON","division":"A"},"3":{"opponent":"EBLANCHET +TPHELPS + KLAGARDE","division":"A"},"4":{"opponent":"MWIERZEL","division":"RIVALRY (A vs B)"},"5":{"opponent":"AROGERS","division":"A"},"6":{"opponent":"JODELL","division":"A"}},"JPASQUALE":{"1":{"opponent":"MBOZICH","division":"A"},"2":{"opponent":"JODELL","division":"A"},"3":{"opponent":"AROGERS","division":"A"},"4":{"opponent":"TMANGOLD","division":"RIVALRY (C vs A)"},"5":{"opponent":"DHASSELSON","division":"A"},"6":{"opponent":"EBLANCHET +TPHELPS + KLAGARDE","division":"A"}},"JREECE":{"1":{"opponent":"CKASTEN","division":"B"},"2":{"opponent":"JDITTY","division":"B"},"3":{"opponent":"LMAGNOTTI","division":"B"},"4":{"opponent":"AROGERS","division":"RIVALRY (A vs B)"},"5":{"opponent":"MWIERZEL","division":"B"},"6":{"opponent":"MCURTIS","division":"B"}},"CKASTEN":{"1":{"opponent":"JREECE","division":"B"},"2":{"opponent":"LMAGNOTTI","division":"B"},"3":{"opponent":"MCURTIS","division":"B"},"4":{"opponent":"SCOWIE","division":"RIVALRY (B vs C)"},"5":{"opponent":"JDITTY","division":"B"},"6":{"opponent":"MWIERZEL","division":"B"}},"MCURTIS":{"1":{"opponent":"JDITTY","division":"B"},"2":{"opponent":"MWIERZEL","division":"B"},"3":{"opponent":"CKASTEN","division":"B"},"4":{"opponent":"DHASSELSON","division":"RIVALRY (A vs B)"},"5":{"opponent":"LMAGNOTTI","division":"B"},"6":{"opponent":"JREECE","division":"B"}},"JDITTY":{"1":{"opponent":"MCURTIS","division":"B"},"2":{"opponent":"JREECE","division":"B"},"3":{"opponent":"MWIERZEL","division":"B"},"4":{"opponent":"SOSAWA","division":"RIVALRY (B vs C)"},"5":{"opponent":"CKASTEN","division":"B"},"6":{"opponent":"LMAGNOTTI","division":"B"}},"MWIERZEL":{"1":{"opponent":"LMAGNOTTI","division":"B"},"2":{"opponent":"MCURTIS","division":"B"},"3":{"opponent":"JDITTY","division":"B"},"4":{"opponent":"MBOZICH","division":"RIVALRY (A vs B)"},"5":{"opponent":"JREECE","division":"B"},"6":{"opponent":"CKASTEN","division":"B"}},"LMAGNOTTI":{"1":{"opponent":"MWIERZEL","division":"B"},"2":{"opponent":"CKASTEN","division":"B"},"3":{"opponent":"JREECE","division":"B"},"4":{"opponent":"BPHILLIPS","division":"RIVALRY (B vs C)"},"5":{"opponent":"MCURTIS","division":"B"},"6":{"opponent":"JDITTY","division":"B"}},"BPHILLIPS":{"1":{"opponent":"MMIOTTI","division":"C"},"2":{"opponent":"HBUDISH","division":"C"},"3":{"opponent":"TMANGOLD","division":"C"},"4":{"opponent":"LMAGNOTTI","division":"RIVALRY (B vs C)"},"5":{"opponent":"SCOWIE","division":"C"},"6":{"opponent":"SOSAWA","division":"C"}},"MMIOTTI":{"1":{"opponent":"BPHILLIPS","division":"C"},"2":{"opponent":"TMANGOLD","division":"C"},"3":{"opponent":"SOSAWA","division":"C"},"4":{"opponent":"JODELL","division":"RIVALRY (C vs A)"},"5":{"opponent":"HBUDISH","division":"C"},"6":{"opponent":"SCOWIE","division":"C"}},"SOSAWA":{"1":{"opponent":"HBUDISH","division":"C"},"2":{"opponent":"SCOWIE","division":"C"},"3":{"opponent":"MMIOTTI","division":"C"},"4":{"opponent":"JDITTY","division":"RIVALRY (B vs C)"},"5":{"opponent":"TMANGOLD","division":"C"},"6":{"opponent":"BPHILLIPS","division":"C"}},"HBUDISH":{"1":{"opponent":"SOSAWA","division":"C"},"2":{"opponent":"BPHILLIPS","division":"C"},"3":{"opponent":"SCOWIE","division":"C"},"4":{"opponent":"EBLANCHET +TPHELPS + KLAGARDE","division":"RIVALRY (C vs A)"},"5":{"opponent":"MMIOTTI","division":"C"},"6":{"opponent":"TMANGOLD","division":"C"}},"SCOWIE":{"1":{"opponent":"TMANGOLD","division":"C"},"2":{"opponent":"SOSAWA","division":"C"},"3":{"opponent":"HBUDISH","division":"C"},"4":{"opponent":"CKASTEN","division":"RIVALRY (B vs C)"},"5":{"opponent":"BPHILLIPS","division":"C"},"6":{"opponent":"MMIOTTI","division":"C"}},"TMANGOLD":{"1":{"opponent":"SCOWIE","division":"C"},"2":{"opponent":"MMIOTTI","division":"C"},"3":{"opponent":"BPHILLIPS","division":"C"},"4":{"opponent":"JPASQUALE","division":"RIVALRY (C vs A)"},"5":{"opponent":"SOSAWA","division":"C"},"6":{"opponent":"HBUDISH","division":"C"}}};
+const MANAGERS = ["AROGERS","BPHILLIPS","CKASTEN","DHASSELSON","EBLANCHET +TPHELPS + KLAGARDE","HBUDISH","JDITTY","JODELL","JPASQUALE","JREECE","LMAGNOTTI","MBOZICH","MCURTIS","MMIOTTI","MWIERZEL","SCOWIE","SOSAWA","TMANGOLD"];
+const ADMINS = ["JLALAMA","ATUCKER","MPENA"];
+const ADMIN_PIN_HASH = '27d45c2ed8ab5bb37222076ffa3ff4374f5a5e87c839014d380a58a7880457e1';
+const MANAGER_PIN_HASHES = {"AROGERS":"c66f1f34f49381e467d3abd43c77947f5d1dd362fd0eec6c2c1f27233ae9adf9","BPHILLIPS":"efe8564971192c24d29c7aedb7c5230aeaf13dbac7815bb7bd2206bdcc483350","CKASTEN":"5fe46e04994d11413f7a0b17bb2e12cb4ce78b5bd2770a9242dc465a50baa18f","DHASSELSON":"ddd180a4466685b23ed9fee26d0d9cb5f081608808cceaa9cf74a9ece83a5bf4","EBLANCHET +TPHELPS + KLAGARDE":"9f2b69296b69933a12d3cfe71182c77b9cc50edb46e4ded9b944ce04f779307b","HBUDISH":"617c14bb6cfaff0ae12cdcfa89bffa353217611d62c53120b8c5473b5acf4581","JDITTY":"d0ea28283d465708b25553535043283e801e26da23030320d6b649f2b3e4e8c6","JODELL":"285cd61ccbba9294f4a2041555271a8671c1ebf0abd33efb9073b240a7b6b5d0","JPASQUALE":"aa82088246685c17ebf16d48877686b831ed384ffdc42e76494283c271704d7a","JREECE":"1a145b425f30663a2d6668b6e836bc1fc0afb675e5b82c19ab86a9df6a980476","LMAGNOTTI":"8f08fb89c225a58e92455fae25d3df22bda90a094bfc8e0240b8a9bd94318159","MBOZICH":"cf23dc33d6aba13592a72190564ed18b2c0dae295f681ee0fddc4862f01225cf","MCURTIS":"29e2c686a1fab3fa529bacb349d8af3fd7c96ec2b5fafb13f7a4ba82894269c7","MMIOTTI":"486ea85278bd246cca4a4de0dd8e08ed0802eed350c73eebd662a4578c281496","MWIERZEL":"459ef54b95078ec14162ab65a269e9179f14488554e29475504b3b25b2f17cb1","SCOWIE":"f3cd266d4f44abec08b07d354dbb38879be65f29e631a2ee98f6d8ea24f1e3d0","SOSAWA":"95fc6cd8aeb992c4169c1f26d4514523b37130b38ce5ca12500e621145be3e15","TMANGOLD":"df3c5a3eab925a314bfab4065c357c33cefff08fe1e4bd9fd470ed94500a37aa"};
+const TOTAL_WEEKS = 6;
+const SEASON_START = new Date('2026-09-21T00:00:00');
+
+
+const API_URL = https://script.google.com/a/macros/arrivelogistics.com/s/AKfycbwW24nLEYDLeIGtbOWusUPtyR10aXDYOctsV3CooVITTkdaMTJRHvbVUpfhdcOVpBg/exec;
+
+function getCurrentWeek(){
+  const now = new Date();
+  if(now < SEASON_START) return 1;
+  const diff = Math.floor((now - SEASON_START) / 86400000);
+  return Math.min(Math.max(Math.floor(diff/7)+1,1),TOTAL_WEEKS);
+}
+const CURRENT_WEEK = getCurrentWeek();
+
+let state = {
+  user:null, isAdmin:false, pendingCode:null,
+  viewingWeek:CURRENT_WEEK, selected:new Set(),
+  _selectedInit:false, _selectedInitWeek:null,
+  pinAttempts:0,
+  // local cache so we don't re-fetch on every re-render
+  rosterCache:{},
+};
+
+const app = document.getElementById('app');
+const apiReady = API_URL !== 'PASTE_YOUR_APPS_SCRIPT_URL_HERE';
+
+// ---------- API ----------
+async function apiCall(body){
+  const resp = await fetch(API_URL, {
+    method:'POST',
+    body: JSON.stringify(body),
+  });
+  return resp.json();
+}
+
+async function rosterGet(manager, week){
+  const key = `${manager}:${week}`;
+  if(state.rosterCache[key] !== undefined) return state.rosterCache[key];
+  if(!apiReady) return null;
+  try{
+    const r = await apiCall({ action:'getRoster', manager, week });
+    const val = (r.success && r.reps && r.reps.length > 0)
+      ? { reps: r.reps, submittedAt: r.submittedAt }
+      : null;
+    state.rosterCache[key] = val;
+    return val;
+  }catch(e){ return null; }
+}
+
+async function rosterSet(manager, week, data){
+  state.rosterCache[`${manager}:${week}`] = data; // optimistic update
+  if(!apiReady) return;
+  await apiCall({ action:'saveRoster', manager, week, reps:data.reps, submittedAt:data.submittedAt });
+}
+
+async function getAllRosters(){
+  if(!apiReady) return {};
+  try{
+    const r = await apiCall({ action:'getAllRosters' });
+    return r.success ? r.rosters : {};
+  }catch(e){ return {}; }
+}
+
+// ---------- AUTH ----------
+async function sha256(msg){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(msg));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function render(){
+  if(!state.user && !state.pendingCode){ renderLogin(); return; }
+  if(state.pendingCode){ renderPinPrompt(); return; }
+  if(state.isAdmin){ await renderAdmin(); return; }
+  await renderManager();
+}
+
+// ---------- LOGIN ----------
+function renderLogin(){
+  const all = [...MANAGERS,...ADMINS].sort();
+  app.innerHTML=`
+    ${!apiReady ? `<div class="setup-banner">
+      <h3>⚙ Setup required</h3>
+      <p style="margin:0;font-size:13px;color:var(--text-dim);">
+        Open this file in a text editor and replace <code>PASTE_YOUR_APPS_SCRIPT_URL_HERE</code>
+        with your deployed Apps Script URL. Data will not save until this is done.
+      </p>
+    </div>` : ''}
+    <div class="brand">
+      <div class="shield"><span>FF</span></div>
+      <div><h1>Fantasy Freight</h1><div class="sub">Weekly roster submissions</div></div>
+    </div>
+    <div class="card login-box">
+      <h2>Sign in</h2>
+      <label>Your Arrive User Code</label>
+      <select id="loginSelect">
+        <option value="">-- select your code --</option>
+        ${all.map(m=>`<option value="${m}">${m}${ADMINS.includes(m)?' (admin)':''}</option>`).join('')}
+      </select>
+      <div class="row"><div style="flex:1"></div><button class="btn" id="loginBtn">Continue →</button></div>
+      <div class="hint">Select your code then enter your PIN.</div>
+    </div>`;
+  document.getElementById('loginBtn').onclick = () => {
+    const val = document.getElementById('loginSelect').value;
+    if(!val) return;
+    state.pendingCode = val; state.pinAttempts = 0; render();
+  };
+}
+
+// ---------- PIN ----------
+function renderPinPrompt(){
+  const isAdmin = ADMINS.includes(state.pendingCode);
+  const locked = state.pinAttempts >= 5;
+  app.innerHTML=`
+    <div class="brand">
+      <div class="shield"><span>FF</span></div>
+      <div><h1>Fantasy Freight</h1><div class="sub">${isAdmin?'Admin access':'Manager sign-in'}</div></div>
+    </div>
+    <div class="card login-box">
+      <div class="lock-icon">${isAdmin?'🔒':'🏈'}</div>
+      <h2 style="text-align:center;">Enter your PIN</h2>
+      <p style="color:var(--text-dim);font-size:13px;text-align:center;margin-top:0;">
+        Signing in as <strong style="color:var(--accent)">${state.pendingCode}</strong>
+      </p>
+      ${locked ? `<div class="attempts-warn">Too many attempts — refresh and try again.</div>` : `
+      <label>4-digit PIN</label>
+      <input type="password" id="pinInput" maxlength="4" placeholder="••••" autocomplete="off"
+        inputmode="numeric" style="font-size:24px;text-align:center;letter-spacing:8px;" />
+      <div class="error-msg" id="pinErr" style="display:none;"></div>
+      ${state.pinAttempts > 0 ? `<div class="attempts-warn">${state.pinAttempts} failed attempt(s). ${5-state.pinAttempts} remaining.</div>` : ''}
+      <div class="row">
+        <button class="btn ghost" id="cancelPin">← Back</button>
+        <div style="flex:1"></div>
+        <button class="btn" id="submitPin">Unlock</button>
+      </div>`}
+    </div>`;
+  if(locked) return;
+  const pinInput = document.getElementById('pinInput');
+  pinInput.focus();
+  document.getElementById('cancelPin').onclick = () => { state.pendingCode=null; state.pinAttempts=0; render(); };
+  const doSubmit = async () => {
+    const entered = pinInput.value.trim();
+    if(!entered) return;
+    const hash = await sha256(entered);
+    const correct = ADMINS.includes(state.pendingCode) ? ADMIN_PIN_HASH : MANAGER_PIN_HASHES[state.pendingCode];
+    if(hash === correct){
+      state.user = state.pendingCode; state.isAdmin = ADMINS.includes(state.pendingCode);
+      state.pendingCode = null; state.pinAttempts = 0;
+      state.viewingWeek = CURRENT_WEEK; state._selectedInit = false;
+      render();
+    } else {
+      state.pinAttempts++;
+      const err = document.getElementById('pinErr');
+      err.style.display='block';
+      err.textContent = state.pinAttempts >= 5 ? 'Too many attempts. Refresh to try again.' : `Incorrect PIN — ${5-state.pinAttempts} attempt(s) remaining.`;
+      pinInput.value='';
+      if(state.pinAttempts >= 5) render(); else pinInput.focus();
+    }
+  };
+  document.getElementById('submitPin').onclick = doSubmit;
+  pinInput.onkeydown = e => { if(e.key==='Enter') doSubmit(); };
+}
+
+function logoutBtn(){ return `<button class="btn ghost small" id="logoutBtn">Switch user</button>`; }
+function bindLogout(){
+  const b=document.getElementById('logoutBtn');
+  if(b) b.onclick=()=>{ state.user=null;state.isAdmin=false;state.pendingCode=null;
+    state._selectedInit=false;state.pinAttempts=0;state.rosterCache={};render(); };
+}
+
+// ---------- MANAGER VIEW ----------
+async function renderManager(){
+  const manager = state.user;
+  const reps = REPS_BY_MANAGER[manager]||[];
+  const week = state.viewingWeek;
+  const canEdit = week === CURRENT_WEEK;
+
+  // show skeleton immediately
+  app.innerHTML=`
+    <div class="topbar">
+      <div class="brand" style="margin-bottom:0;">
+        <div class="shield"><span>FF</span></div>
+        <div><h1 style="font-size:22px;">Fantasy Freight</h1><div class="sub">Roster submission</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="whoami">${manager}</div>${logoutBtn()}
+      </div>
+    </div>
+    <div class="weektabs" id="weektabs">
+      ${Array.from({length:TOTAL_WEEKS},(_,i)=>i+1).map(w=>`
+        <div class="weektab ${w===week?'active':''}" data-week="${w}" style="position:relative;">
+          WK${w}${w===CURRENT_WEEK?`<div style="position:absolute;top:3px;right:6px;width:6px;height:6px;border-radius:50%;background:${w===week?'#1a1206':'var(--accent)'};"></div>`:''}
+        </div>`).join('')}
+    </div>
+    <div class="card" id="mainCard"><div class="hint" style="padding:20px 0;">Loading roster data…</div></div>
+    <div class="card" id="progressCard"><div class="hint">Loading season progress…</div></div>`;
+
+  bindLogout();
+  document.querySelectorAll('#weektabs .weektab').forEach(t=>{
+    t.onclick=()=>{ state.viewingWeek=parseInt(t.dataset.week); state._selectedInit=false; render(); };
+  });
+
+  // fetch data
+  const [current, prev] = await Promise.all([
+    rosterGet(manager, week),
+    week > 1 ? rosterGet(manager, week-1) : Promise.resolve(null)
+  ]);
+  const lockedReps = new Set(prev ? prev.reps : []);
+  const alreadySubmitted = current && current.reps.length === 7;
+
+  if(!state._selectedInit || state._selectedInitWeek !== week){
+    state.selected = new Set(current ? current.reps : []);
+    state._selectedInit=true; state._selectedInitWeek=week;
+  }
+
+  const opp = SCHEDULE[manager]&&SCHEDULE[manager][String(week)] ? SCHEDULE[manager][String(week)] : null;
+
+  document.getElementById('mainCard').innerHTML=`
+    <div class="matchup">
+      ${opp?`<b>Week ${week}</b> &middot; vs <b>${opp.opponent}</b> ${opp.division&&opp.division.includes('RIVALRY')?'<span class="vs">⚔ RIVALRY WEEK</span>':''}`:`<b>Week ${week}</b>`}
+    </div>
+    ${alreadySubmitted?`<div class="submitted-badge">✓ Roster submitted</div>`:''}
+    ${!canEdit&&alreadySubmitted?`<div class="read-only-note">📋 Past week — roster locked.</div>`:''}
+    ${!canEdit&&!alreadySubmitted?`<div class="read-only-note">⚠ Submissions only open for the current week (Week ${CURRENT_WEEK}).</div>`:''}
+    ${canEdit&&lockedReps.size>0?`<div class="locked-note">Reps grayed out played Week ${week-1} and cannot be re-selected this week.</div>`:''}
+    <div class="replist">
+      ${reps.slice().sort().map(rep=>{
+        const locked=lockedReps.has(rep), checked=state.selected.has(rep), disabled=locked||!canEdit;
+        return `<label class="repchip ${checked?'checked':''} ${disabled?'locked':''}">
+          <input type="checkbox" data-rep="${rep}" ${checked?'checked':''} ${disabled?'disabled':''}/>
+          ${rep}</label>`;
+      }).join('')}
+    </div>
+    <div class="counter ${state.selected.size===7?'ok':'warn'}">${state.selected.size} / 7 selected</div>
+    <div class="footer-row">
+      <div>
+        ${current?`<span class="hint">Last saved: ${new Date(current.submittedAt).toLocaleString()}</span>`:`<span class="hint">Not submitted yet</span>`}
+        <div id="syncTagWrap"></div>
+      </div>
+      ${canEdit?`<button class="btn" id="submitBtn" ${state.selected.size!==7?'disabled':''}>Save roster</button>`:''}
+    </div>`;
+
+  if(canEdit){
+    document.querySelectorAll('.replist input[type=checkbox]').forEach(cb=>{
+      cb.onchange=()=>{ const r=cb.dataset.rep; if(cb.checked) state.selected.add(r); else state.selected.delete(r);
+        document.querySelector('.counter').textContent=`${state.selected.size} / 7 selected`;
+        document.querySelector('.counter').className=`counter ${state.selected.size===7?'ok':'warn'}`;
+        const btn=document.getElementById('submitBtn');
+        if(btn) btn.disabled=state.selected.size!==7;
+        document.querySelectorAll('.repchip').forEach(chip=>{
+          const inp=chip.querySelector('input');
+          if(!inp.disabled) chip.className=`repchip ${inp.checked?'checked':''}`;
+        });
+      };
+    });
+    const btn=document.getElementById('submitBtn');
+    if(btn) btn.onclick=async()=>{
+      btn.disabled=true; btn.textContent='Saving…';
+      const repsArr=Array.from(state.selected);
+      const ts=new Date().toISOString();
+      setSyncTag('pending');
+      await rosterSet(manager,week,{reps:repsArr,submittedAt:ts});
+      setSyncTag('ok');
+      btn.textContent='Save roster';
+      state._selectedInit=false;
+      render();
+    };
+  }
+
+  // progress row
+  const progressCells=[];
+  for(let w=1;w<=TOTAL_WEEKS;w++){
+    const r=await rosterGet(manager,w);
+    const n=r?r.reps.length:0;
+    progressCells.push(`<div class="pchip ${n===7?'full':(n>0?'partial':'empty')}" title="Week ${w}: ${n}/7">${w}</div>`);
+  }
+  const pc=document.getElementById('progressCard');
+  if(pc) pc.innerHTML=`
+    <label style="margin-bottom:10px;">Your season progress</label>
+    <div class="progressrow">${progressCells.join('')}</div>
+    <div class="hint">Green = 7 selected · Yellow = incomplete · Red = not submitted</div>`;
+}
+
+function setSyncTag(status){
+  const wrap=document.getElementById('syncTagWrap');
+  if(!wrap) return;
+  if(status==='pending') wrap.innerHTML=`<span class="synctag pending">Saving to sheet…</span>`;
+  else if(status==='ok') wrap.innerHTML=`<span class="synctag ok">✓ Saved to sheet</span>`;
+  else wrap.innerHTML=`<span class="synctag err">Save failed — check connection</span>`;
+}
+
+// ---------- ADMIN VIEW ----------
+async function renderAdmin(){
+  app.innerHTML=`
+    <div class="topbar">
+      <div class="brand" style="margin-bottom:0;">
+        <div class="shield"><span>FF</span></div>
+        <div><h1 style="font-size:22px;">Fantasy Freight</h1><div class="sub">Admin — submission tracker</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="whoami">${state.user} <span style="color:var(--text-dim);font-size:11px;">(admin)</span></div>
+        ${logoutBtn()}
+      </div>
+    </div>
+    <div class="card" id="pendingCard"><div class="hint">Loading…</div></div>
+    <div class="card">
+      <div class="toolbar">
+        <button class="btn ghost small" id="refreshBtn">↻ Refresh</button>
+        <button class="btn ghost small" id="exportCsv">Export CSV</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table><thead><tr>
+          <th style="text-align:left;">Team</th>
+          ${Array.from({length:TOTAL_WEEKS},(_,i)=>`<th>WK${i+1}</th>`).join('')}
+        </tr></thead><tbody id="gridBody"><tr><td colspan="${TOTAL_WEEKS+1}" style="color:var(--text-dim);padding:20px;">Loading all rosters…</td></tr></tbody></table>
+      </div>
+    </div>
+    <div id="modalHost"></div>`;
+
+  bindLogout();
+  document.getElementById('refreshBtn').onclick=()=>{ state.rosterCache={}; renderAdmin(); };
+
+  // Fetch all rosters in one call
+  const allRosters = await getAllRosters();
+  const pendingByWeek={};
+  for(let w=1;w<=TOTAL_WEEKS;w++) pendingByWeek[w]=[];
+
+  // Populate cache from bulk fetch
+  for(const mgr of MANAGERS){
+    for(let w=1;w<=TOTAL_WEEKS;w++){
+      const key=`${mgr}:${w}`;
+      const weekData = allRosters[mgr] && allRosters[mgr][w];
+      state.rosterCache[key] = weekData && weekData.reps.length > 0 ? weekData : null;
+    }
+  }
+
+  let rowsHtml='';
+  for(const mgr of MANAGERS){
+    let cells='';
+    for(let w=1;w<=TOTAL_WEEKS;w++){
+      const r=state.rosterCache[`${mgr}:${w}`];
+      const n=r?r.reps.length:0;
+      if(n<7) pendingByWeek[w].push(mgr+(n>0?` (${n}/7)`:''));
+      const opp=SCHEDULE[mgr]&&SCHEDULE[mgr][String(w)]?SCHEDULE[mgr][String(w)].opponent:'';
+      cells+=`<td><div class="cell ${n===7?'full':(n>0?'partial':'empty')}" data-mgr="${mgr}" data-week="${w}">${n}/7<small>${opp}</small></div></td>`;
+    }
+    rowsHtml+=`<tr><td class="team">${mgr}</td>${cells}</tr>`;
+  }
+  document.getElementById('gridBody').innerHTML=rowsHtml;
+
+  const curPending=pendingByWeek[CURRENT_WEEK]||[];
+  document.getElementById('pendingCard').innerHTML=`
+    <label>Pending — Week ${CURRENT_WEEK} (current)</label>
+    ${curPending.length===0
+      ?`<div class="hint" style="color:var(--good);">✓ All rosters submitted!</div>`
+      :`<div class="pending-list">${curPending.map(m=>`<span class="pending-pill">${m}</span>`).join('')}</div>`}`;
+
+  document.querySelectorAll('.cell').forEach(c=>{
+    c.onclick=async()=>{
+      const mgr=c.dataset.mgr, w=c.dataset.week;
+      const r=state.rosterCache[`${mgr}:${w}`];
+      const all=(REPS_BY_MANAGER[mgr]||[]).slice().sort();
+      const sel=new Set(r?r.reps:[]);
+      document.getElementById('modalHost').innerHTML=`
+        <div class="modal-bg" id="modalBg"><div class="modal">
+          <h3>${mgr} — Week ${w}</h3>
+          <div class="hint" style="margin-bottom:10px;">${r?'Submitted '+new Date(r.submittedAt).toLocaleString():'Not submitted'}</div>
+          ${all.map(rep=>`<div class="rep-row"><span>${rep}</span><span class="${sel.has(rep)?'yes':'no'}">${sel.has(rep)?'PLAYS':'—'}</span></div>`).join('')}
+        </div></div>`;
+      document.getElementById('modalBg').onclick=e=>{ if(e.target.id==='modalBg') document.getElementById('modalHost').innerHTML=''; };
+    };
+  });
+
+  document.getElementById('exportCsv').onclick=()=>{
+    let csv='REP,Manager,Week,Plays\n';
+    for(const mgr of MANAGERS){
+      const all=(REPS_BY_MANAGER[mgr]||[]).slice().sort();
+      for(let w=1;w<=TOTAL_WEEKS;w++){
+        const r=state.rosterCache[`${mgr}:${w}`];
+        const sel=new Set(r?r.reps:[]);
+        for(const rep of all) csv+=`${rep},${mgr},${w},${sel.has(rep)?'TRUE':'FALSE'}\n`;
+      }
+    }
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+    a.download='fantasy_freight_export.csv'; a.click();
+  };
+}
+
+render();
+</script>
+</body>
+</html>
