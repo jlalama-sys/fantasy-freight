@@ -115,9 +115,33 @@ async function sha256(msg){
   return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
 }
 
-async function apiCall(body){
-  var resp = await fetch(API_URL,{method:'POST',body:JSON.stringify(body)});
-  return resp.json();
+function jsonp(params) {
+  return new Promise(function(resolve, reject) {
+    var cbName = 'ff_cb_' + Math.random().toString(36).slice(2);
+    var url = API_URL + '?callback=' + cbName;
+    for (var k in params) {
+      url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(
+        typeof params[k] === 'object' ? JSON.stringify(params[k]) : params[k]
+      );
+    }
+    window[cbName] = function(data) {
+      delete window[cbName];
+      document.body.removeChild(script);
+      resolve(data);
+    };
+    var script = document.createElement('script');
+    script.src = url;
+    script.onerror = function() {
+      delete window[cbName];
+      document.body.removeChild(script);
+      reject(new Error('JSONP request failed'));
+    };
+    document.body.appendChild(script);
+  });
+}
+
+async function apiCall(params) {
+  return jsonp(params);
 }
 
 async function rosterGet(manager,week){
@@ -133,7 +157,13 @@ async function rosterGet(manager,week){
 
 async function rosterSet(manager,week,data){
   state.rosterCache[manager+':'+week] = data;
-  await apiCall({action:'saveRoster',manager:manager,week:week,reps:data.reps,submittedAt:data.submittedAt});
+  try {
+    var result = await apiCall({action:'saveRoster',manager:manager,week:week,reps:data.reps,submittedAt:data.submittedAt});
+    console.log('saveRoster result:', result);
+  } catch(e) {
+    console.error('saveRoster error:', e);
+    throw e;
+  }
 }
 
 async function getAllRosters(){
