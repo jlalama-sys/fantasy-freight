@@ -355,7 +355,7 @@ async function renderAdmin(){
     var mgr=MANAGERS[mi];
     for(var w=1;w<=TOTAL_WEEKS;w++){
       var key=mgr+':'+w;
-      var wd=allRosters[mgr]&&allRosters[mgr][w];
+      var wd=allRosters[mgr]&&(allRosters[mgr][w]||allRosters[mgr][String(w)]);
       state.rosterCache[key]=wd&&wd.reps&&wd.reps.length>0?wd:null;
     }
   }
