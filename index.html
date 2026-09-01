@@ -179,8 +179,8 @@ async function render(){
 }
 
 function renderLogin(){
-  var all = MANAGERS.concat(ADMINS).sort();
-  var opts = all.map(function(m){return '<option value="'+m+'">'+m+(ADMINS.indexOf(m)>=0?' (admin)':'')+'</option>';}).join('');
+  var all = MANAGERS.concat(ADMIN_CODE).sort();
+  var opts = all.map(function(m){return '<option value="'+m+'">'+m+(ADMIN_CODE.indexOf(m)>=0?' (admin)':'')+'</option>';}).join('');
   app.innerHTML =
     '<div class="brand"><div class="shield"><span>FF</span></div><div><h1>Fantasy Freight</h1><div class="sub">Weekly roster submissions</div></div></div>'+
     '<div class="card login-box"><h2>Sign in</h2><label>Your Arrive User Code</label>'+
@@ -195,7 +195,7 @@ function renderLogin(){
 }
 
 function renderPinPrompt(){
-  var isAdmin = ADMINS.indexOf(state.pendingCode) >= 0;
+  var isAdmin = ADMIN_CODE.indexOf(state.pendingCode) >= 0;
   var locked = state.pinAttempts >= 5;
   app.innerHTML =
     '<div class="brand"><div class="shield"><span>FF</span></div><div><h1>Fantasy Freight</h1><div class="sub">'+(isAdmin?'Admin access':'Manager sign-in')+'</div></div></div>'+
@@ -219,9 +219,9 @@ function renderPinPrompt(){
     var entered = pi.value.trim();
     if(!entered) return;
     var hash = await sha256(entered);
-    var correct = ADMINS.indexOf(state.pendingCode)>=0 ? ADMIN_PIN_HASH : MANAGER_PIN_HASHES[state.pendingCode];
+    var correct = ADMIN_CODE.indexOf(state.pendingCode)>=0 ? ADMIN_PIN_HASH : MANAGER_PIN_HASHES[state.pendingCode];
     if(hash === correct){
-      state.user=state.pendingCode; state.isAdmin=ADMINS.indexOf(state.pendingCode)>=0;
+      state.user=state.pendingCode; state.isAdmin=ADMIN_CODE.indexOf(state.pendingCode)>=0;
       state.pendingCode=null; state.pinAttempts=0;
       state.viewingWeek=CURRENT_WEEK; state._selectedInit=false;
       render();
