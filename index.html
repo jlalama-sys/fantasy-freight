@@ -194,7 +194,7 @@ function rLogin(){
     '<div class="ll">'+
     '<img src="'+LOGO+'" alt="FF"/>'+
     '<h1>BizDev Fantasy Freight 2026</h1>'+
-    '<div class="sub">Weekly Roster Submissions</div>'+
+    '<div class="sub">Weekly roster submissions</div>'+
     '</div>'+
     '<div class="card">'+
     '<label>Your Arrive User Code</label>'+
@@ -202,7 +202,7 @@ function rLogin(){
     all.map(function(m){return '<option value="'+m+'">'+m+(m==='ADMIN'?' (admin)':'')+'</option>';}).join('')+
     '</select>'+
     '<div class="login-continue"><button class="btn" id="lb2">Continue</button></div>'+
-    '<div class="login-hint">For Roster Issues Message #bizdev_analytics_service_desk.</div>'+
+    '<div class="login-hint">Need a roster change after submission? Contact JLALAMA or ATUCKER.</div>'+
     '</div></div></div>';
   document.getElementById('lb2').onclick=function(){
     var v=document.getElementById('ls').value;if(!v)return;
@@ -236,6 +236,8 @@ function rPin(){
     if(ok){
       state.user=state.pending;state.admin=state.pending==='ADMIN';
       state.pending=null;state.tries=0;state.week=CW;state.init=false;
+      // Show loading immediately so user knows PIN was accepted
+      app.innerHTML='<div class="lw"><div class="lb"><div class="ll"><img src="'+LOGO+'" alt="FF" style="width:80px;height:80px;"/><h1 style="font-family:Oswald,sans-serif;font-size:20px;text-transform:uppercase;margin:12px 0 4px;">Loading...</h1><div class="sub" style="color:var(--dim);">Fetching your roster data</div></div></div></div>';
       state.locks=await getLocks();
       render();
     } else {
@@ -263,6 +265,20 @@ async function rMgr(){
   var mgr=state.user,reps=RBM[mgr]||[],wk=state.week;
   var isSmall=reps.length<=SMALL_THRESHOLD;
   var weekLocked=isWeekLocked(wk);
+  // Preload all rosters into cache in one batch call if not already loaded
+  var cacheKeys=Object.keys(state.cache).filter(function(k){return k.indexOf(mgr+':')===0;});
+  if(cacheKeys.length<TOTAL_WEEKS){
+    try{
+      var allData=await allR();
+      for(var w2=1;w2<=TOTAL_WEEKS;w2++){
+        var ck2=mgr+':'+w2;
+        if(state.cache[ck2]===undefined){
+          var wd2=allData[mgr]&&(allData[mgr][w2]||allData[mgr][String(w2)]);
+          state.cache[ck2]=wd2&&wd2.reps&&wd2.reps.length>0?wd2:null;
+        }
+      }
+    }catch(e){}
+  }
 
   var tabs='';
   for(var w=1;w<=TOTAL_WEEKS;w++){
@@ -368,7 +384,18 @@ function setST(s){
 
 /* ---- ADMIN ---- */
 async function rAdmin(){
-  state.locks=await getLocks();
+  // Fetch locks and all rosters in parallel
+  var parallel=await Promise.all([getLocks(),allR()]);
+  state.locks=parallel[0];
+  var arPreloaded=parallel[1];
+  // Pre-populate cache
+  for(var mi2=0;mi2<MGR.length;mi2++){
+    var mg2=MGR[mi2];
+    for(var w2=1;w2<=TOTAL_WEEKS;w2++){
+      var wd2=arPreloaded[mg2]&&(arPreloaded[mg2][w2]||arPreloaded[mg2][String(w2)]);
+      state.cache[mg2+':'+w2]=wd2&&wd2.reps&&wd2.reps.length>0?wd2:null;
+    }
+  }
 
   app.innerHTML='<div class="wrap">'+
     '<div class="tb">'+brandHtml('Admin &mdash; Submission tracker')+
@@ -411,18 +438,8 @@ async function rAdmin(){
     })(ww);
   }
 
-  var ar=await allR();
   var pendingPerWeek={};
   for(var w=1;w<=TOTAL_WEEKS;w++)pendingPerWeek[w]=[];
-
-  for(var mi=0;mi<MGR.length;mi++){
-    var mg=MGR[mi];
-    for(var w=1;w<=TOTAL_WEEKS;w++){
-      // Try both number and string keys from the sheet
-      var wd=ar[mg]&&(ar[mg][w]||ar[mg][String(w)]);
-      state.cache[mg+':'+w]=wd&&wd.reps&&wd.reps.length>0?wd:null;
-    }
-  }
 
   var rh='';
   for(var mi=0;mi<MGR.length;mi++){
