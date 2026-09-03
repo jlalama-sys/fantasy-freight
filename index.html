@@ -202,7 +202,7 @@ function rLogin(){
     all.map(function(m){return '<option value="'+m+'">'+m+(m==='ADMIN'?' (admin)':'')+'</option>';}).join('')+
     '</select>'+
     '<div class="login-continue"><button class="btn" id="lb2">Continue</button></div>'+
-    '<div class="login-hint">Need a roster change after submission? Contact JLALAMA or ATUCKER.</div>'+
+    '<div class="login-hint">For any roster issues please message #bizdev_analytics_service_desk</div>'+
     '</div></div></div>';
   document.getElementById('lb2').onclick=function(){
     var v=document.getElementById('ls').value;if(!v)return;
