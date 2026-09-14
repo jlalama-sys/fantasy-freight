@@ -143,7 +143,7 @@ function rLogin(){
     '<div class="card"><label>Your Arrive User Code</label>'+
     '<select id="ls"><option value="">-- select --</option>'+all.map(function(m){return '<option value="'+m+'">'+m+(m==='ADMIN'?' (admin)':'')+'</option>';}).join('')+'</select>'+
     '<div class="login-continue"><button class="btn" id="lb2">Continue</button></div>'+
-    '<div class="login-hint">Please submit your roster by Thursdays @ 12:00.</div>'+
+    '<div class="login-hint">Please submit your roster by Thursdays @ 15:00.</div>'+
     '<div class="login-hint">For any issue please message #bizdev_analytics_service_desk</div>'+
     '</div></div></div>';
   document.getElementById('lb2').onclick=function(){var v=document.getElementById('ls').value;if(!v)return;state.pending=v;state.tries=0;render();};
@@ -263,7 +263,7 @@ async function rMgr(){
     document.getElementById('mc').innerHTML=
       '<div class="matchup">'+(opp?'<b>Week '+wk+'</b> &middot; vs <b>'+opp.opponent+'</b>'+(opp.division&&opp.division.indexOf('RIVALRY')>=0?' <span class="vs">&#9876; RIVALRY</span>':''):'<b>Week '+wk+'</b>')+'</div>'+
       (weekLocked?'<div class="notice-bad">&#128274; Week '+wk+' locked by admin. Contact JLALAMA or ATUCKER for changes.</div>':'')+
-      (!weekLocked?'<div class="hint" style="margin-bottom:6px;font-size:12px;">&#128274; Rosters will be locked by admins on Thursdays @ 12:00.</div>':'')+
+      (!weekLocked?'<div class="hint" style="margin-bottom:6px;font-size:12px;">&#128274; Rosters will be locked by admins on Thursdays @ 15:00.</div>':'')+
       (!weekLocked?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#9432; All reps must play at least once before you can re-select a rep who has already played.</div>':'')+
       '<div class="rl" id="replist">'+buildChips()+'</div>'+
       '<div class="cnt '+(sc===7?'ok':'w')+'">'+sc+' / 7 selected</div>'+
