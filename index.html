@@ -47,8 +47,7 @@ label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5
   background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:9px 11px;cursor:pointer;user-select:none;transition:border-color .1s,background .1s;}
 .rc:hover:not(.lk){border-color:var(--adim);}
 .rc.ck{background:var(--goodbg);border-color:var(--good);}
-.rc.lk{opacity:.38;cursor:not-allowed;text-decoration:line-through;}
-
+.rc.lk{opacity:.35;cursor:not-allowed;}
 .rc input{accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;}
 .cnt{font-family:'Oswald',sans-serif;font-size:14px;margin-bottom:12px;}
 .cnt.ok{color:var(--good);}.cnt.w{color:var(--warn);}
@@ -73,7 +72,6 @@ label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5
 .who{font-family:'JetBrains Mono',monospace;color:var(--accent);font-weight:700;font-size:14px;}
 .matchup{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:13px;margin-bottom:14px;font-family:'JetBrains Mono',monospace;}
 .matchup b{color:var(--text);}.vs{color:var(--accent);font-weight:700;}
-.footnote{font-size:11px;color:var(--dim);margin-top:12px;}
 table{width:100%;border-collapse:collapse;font-size:12px;}
 th,td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line);}
 th{font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:10px;color:var(--dim);letter-spacing:.4px;}
@@ -126,12 +124,53 @@ async function getLocks(){try{var r=await api({action:'getLocks'});return r.succ
 async function setLock(wk,locked){try{var r=await api({action:'setLock',week:wk,locked:locked});if(r.success){state.locks[String(wk)]=locked;return true;}return false;}catch(e){return false;}}
 function isWeekLocked(wk){return state.locks[String(wk)]===true;}
 
+// Returns reps who have NOT played in any previous submitted week
+// Returns [] if all reps have played (cycle resets)
 function getUnplayedReps(mgr,wk){
   var allReps=RBM[mgr]||[];
   var played=new Set();
-  for(var w=1;w<wk;w++){var r=state.cache[mgr+':'+w];if(r&&r.reps)r.reps.forEach(function(x){played.add(x);});}
+  for(var w=1;w<wk;w++){
+    var r=state.cache[mgr+':'+w];
+    if(r&&r.reps)r.reps.forEach(function(x){played.add(x);});
+  }
+  // Full cycle reset if everyone has played
   if(played.size>=allReps.length)return [];
   return allReps.filter(function(r){return !played.has(r);});
+}
+
+// Core chip state logic — pure function, no DOM side effects
+// Returns for each rep: {locked, checked}
+function computeChipStates(mgr,wk,sel,isSmall,weekLocked,lastWeekReps,unplayed){
+  var allReps=RBM[mgr]||[];
+  var unplayedSet=new Set(unplayed);
+  var hasUnplayedRestriction=unplayed.length>0;
+  var selCount=sel.size;
+
+  // Are ALL unplayed reps currently selected?
+  var allUnplayedSel=hasUnplayedRestriction&&unplayed.every(function(r){return sel.has(r);});
+
+  var states={};
+  allReps.forEach(function(rep){
+    var ck=sel.has(rep);
+    var locked=false;
+
+    if(weekLocked){
+      locked=true;
+    } else if(ck){
+      // Selected reps: only lock if 7 already selected (can still deselect)
+      locked=false;
+    } else {
+      // Unselected reps:
+      // 1. Last week rule (small teams exempt)
+      if(!isSmall&&lastWeekReps.has(rep)){locked=true;}
+      // 2. Unplayed cycle rule (applies to ALL teams including small)
+      else if(hasUnplayedRestriction&&!allUnplayedSel&&!unplayedSet.has(rep)){locked=true;}
+      // 3. 7 already selected — gray out remaining
+      else if(selCount>=7){locked=true;}
+    }
+    states[rep]={locked:locked,checked:ck};
+  });
+  return states;
 }
 
 async function render(){if(!state.user&&!state.pending){rLogin();return;}if(state.pending){rPin();return;}if(state.admin){await rAdmin();return;}await rMgr();}
@@ -218,67 +257,82 @@ async function rMgr(){
   bndL();
   document.querySelectorAll('#wtabs .wt').forEach(function(t){t.onclick=function(){state.week=parseInt(t.dataset.w);state.init=false;render();};});
 
-  // Batch preload all rosters
-  var cacheKeys=Object.keys(state.cache).filter(function(k){return k.indexOf(mgr+':')===0;});
-  if(cacheKeys.length<TOTAL_WEEKS){
-    try{var allData=await allR();for(var w2=1;w2<=TOTAL_WEEKS;w2++){var ck2=mgr+':'+w2;if(state.cache[ck2]===undefined){var wd2=allData[mgr]&&(allData[mgr][w2]||allData[mgr][String(w2)]);state.cache[ck2]=wd2&&wd2.reps&&wd2.reps.length>0?wd2:null;}}}catch(e){}
+  // Single batch load — one API call covers all weeks for this manager
+  var needsLoad=false;
+  for(var w2=1;w2<=TOTAL_WEEKS;w2++){if(state.cache[mgr+':'+w2]===undefined){needsLoad=true;break;}}
+  if(needsLoad){
+    try{
+      var allData=await allR();
+      for(var w3=1;w3<=TOTAL_WEEKS;w3++){
+        var ck3=mgr+':'+w3;
+        var wd3=allData[mgr]&&(allData[mgr][w3]||allData[mgr][String(w3)]);
+        if(state.cache[ck3]===undefined)state.cache[ck3]=wd3&&wd3.reps&&wd3.reps.length>0?wd3:null;
+      }
+    }catch(e){}
   }
 
-  // Refresh progress now that cache is populated
   document.getElementById('pc').innerHTML=progHtml(mgr);
 
-  var res=await Promise.all([
-    state.cache[mgr+':'+wk]!==undefined?Promise.resolve(state.cache[mgr+':'+wk]):rGet(mgr,wk),
-    wk>1?(state.cache[mgr+':'+(wk-1)]!==undefined?Promise.resolve(state.cache[mgr+':'+(wk-1)]):rGet(mgr,wk-1)):Promise.resolve(null)
-  ]);
-  var cur=res[0],prev=res[1];
+  var cur=state.cache[mgr+':'+wk]!==undefined?state.cache[mgr+':'+wk]:await rGet(mgr,wk);
+  var prev=wk>1?(state.cache[mgr+':'+(wk-1)]!==undefined?state.cache[mgr+':'+(wk-1)]:await rGet(mgr,wk-1)):null;
 
   var lastWeekReps=new Set();
+  // Small teams skip the last-week rule ONLY
   if(!isSmall&&prev&&prev.reps)prev.reps.forEach(function(r){lastWeekReps.add(r);});
 
   var unplayed=getUnplayedReps(mgr,wk);
-  var hasUnplayedRestriction=unplayed.length>0;
-  var unplayedSet=new Set(unplayed);
 
   if(!state.init||state.initWk!==wk){state.sel=new Set(cur?cur.reps:[]);state.init=true;state.initWk=wk;}
 
   var opp=SCH[mgr]&&SCH[mgr][String(wk)]?SCH[mgr][String(wk)]:null;
-  var sorted=reps.slice().sort();
+  var sorted=(RBM[mgr]||[]).slice().sort();
 
-  function buildChips(){
-    var allUnplayedSel=hasUnplayedRestriction&&unplayed.every(function(r){return state.sel.has(r);});
-    return sorted.map(function(rep){
-      var isLastWk=lastWeekReps.has(rep);
-      var isUnplayed=unplayedSet.has(rep);
-      var ck=state.sel.has(rep);
-      var locked=weekLocked||isLastWk||(!isSmall&&hasUnplayedRestriction&&!allUnplayedSel&&!isUnplayed);
-      return '<label class="rc '+(ck?'ck':'')+(locked&&!ck?' lk':'')+'">'+
-        '<input type="checkbox" data-r="'+rep+'" '+(ck?'checked':'')+' '+(locked?'disabled':'')+'/> '+rep+'</label>';
-    }).join('');
-  }
-
-  function renderMainCard(){
+  // Renders just the chip list and counter — no full page redraw
+  function renderChips(){
+    var chipStates=computeChipStates(mgr,wk,state.sel,isSmall,weekLocked,lastWeekReps,unplayed);
     var sc=state.sel.size;
-    var allUnplayedSel=hasUnplayedRestriction&&unplayed.every(function(r){return state.sel.has(r);});
-    document.getElementById('mc').innerHTML=
-      '<div class="matchup">'+(opp?'<b>Week '+wk+'</b> &middot; vs <b>'+opp.opponent+'</b>'+(opp.division&&opp.division.indexOf('RIVALRY')>=0?' <span class="vs">&#9876; RIVALRY</span>':''):'<b>Week '+wk+'</b>')+'</div>'+
-      (weekLocked?'<div class="notice-bad">&#128274; Week '+wk+' locked by admin. Contact JLALAMA or ATUCKER for changes.</div>':'')+
-      (!weekLocked?'<div class="hint" style="margin-bottom:6px;font-size:12px;">&#128274; Rosters will be locked by admins on Thursdays @ 15:00.</div>':'')+
-      (!weekLocked?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#9432; All reps must play at least once before you can re-select a rep who has already played.</div>':'')+
-      '<div class="rl" id="replist">'+buildChips()+'</div>'+
-      '<div class="cnt '+(sc===7?'ok':'w')+'">'+sc+' / 7 selected</div>'+
-      '<div class="fr"><div>'+(cur?'<span class="hint">Last saved: '+new Date(cur.submittedAt).toLocaleString()+'</span>':'<span class="hint">Not submitted yet</span>')+'<div id="stw"></div></div>'+
-      (!weekLocked?'<button class="btn" id="svb" '+(sc!==7?'disabled':'')+'>Save roster</button>':'')+
-      '</div>'+
-      '';
-    bindRepListeners();
+
+    var chipsHtml=sorted.map(function(rep){
+      var cs=chipStates[rep];
+      return '<label class="rc '+(cs.checked?'ck':'')+(cs.locked&&!cs.checked?' lk':'')+'">'+
+        '<input type="checkbox" data-r="'+rep+'" '+(cs.checked?'checked':'')+' '+(cs.locked?'disabled':'')+'/> '+rep+'</label>';
+    }).join('');
+
+    document.getElementById('replist').innerHTML=chipsHtml;
+    document.getElementById('cntEl').textContent=sc+' / 7 selected';
+    document.getElementById('cntEl').className='cnt '+(sc===7?'ok':'w');
+    var svb=document.getElementById('svb');
+    if(svb)svb.disabled=sc!==7;
+
+    // Re-bind listeners after DOM update
+    if(!weekLocked){
+      document.querySelectorAll('#replist input').forEach(function(cb){
+        cb.onchange=function(){
+          var r=cb.dataset.r;
+          if(cb.checked)state.sel.add(r);else state.sel.delete(r);
+          renderChips(); // Only re-render chips, not full card
+        };
+      });
+    }
   }
 
-  function bindRepListeners(){
-    if(weekLocked)return;
-    document.querySelectorAll('#replist input').forEach(function(cb){
-      cb.onchange=function(){var r=cb.dataset.r;if(cb.checked)state.sel.add(r);else state.sel.delete(r);renderMainCard();};
-    });
+  var sc0=state.sel.size;
+  document.getElementById('mc').innerHTML=
+    '<div class="matchup">'+(opp?'<b>Week '+wk+'</b> &middot; vs <b>'+opp.opponent+'</b>'+(opp.division&&opp.division.indexOf('RIVALRY')>=0?' <span class="vs">&#9876; RIVALRY</span>':''):'<b>Week '+wk+'</b>')+'</div>'+
+    (weekLocked?'<div class="notice-bad">&#128274; Week '+wk+' locked by admin. Contact JLALAMA or ATUCKER for changes.</div>':'')+
+    (!weekLocked?'<div class="hint" style="margin-bottom:6px;font-size:12px;">&#128274; Rosters will be locked by admins on Thursdays @ 15:00.</div>':'')+
+    (!weekLocked?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#9432; All reps must play at least once before you can re-select a rep who has already played.</div>':'')+
+    (!weekLocked&&!isSmall&&lastWeekReps.size>0&&unplayed.length===0?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#9432; Grayed-out reps played last week and cannot be re-selected.</div>':'')+
+    (isSmall&&!weekLocked?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#127919; Small roster: consecutive-week repeat rule waived for your team.</div>':'')+
+    '<div class="rl" id="replist"></div>'+
+    '<div class="cnt '+(sc0===7?'ok':'w')+'" id="cntEl">'+sc0+' / 7 selected</div>'+
+    '<div class="fr"><div>'+(cur?'<span class="hint">Last saved: '+new Date(cur.submittedAt).toLocaleString()+'</span>':'<span class="hint">Not submitted yet</span>')+'<div id="stw"></div></div>'+
+    (!weekLocked?'<button class="btn" id="svb" '+(sc0!==7?'disabled':'')+'>Save roster</button>':'')+
+    '</div>';
+
+  renderChips();
+
+  if(!weekLocked){
     var svb=document.getElementById('svb');
     if(svb)svb.onclick=async function(){
       svb.disabled=true;svb.textContent='Saving...';
@@ -286,16 +340,18 @@ async function rMgr(){
       setST('p');
       try{
         await rSet(mgr,wk,{reps:ra,submittedAt:ts});
-        state.cache[mgr+':'+wk]={reps:ra,submittedAt:ts};cur={reps:ra,submittedAt:ts};
+        state.cache[mgr+':'+wk]={reps:ra,submittedAt:ts};
+        cur={reps:ra,submittedAt:ts};
         setST('ok');
         document.getElementById('pc').innerHTML=progHtml(mgr);
+        // Update last-saved line
+        var hint=document.querySelector('#mc .hint');
+        if(hint)hint.textContent='Last saved: '+new Date(ts).toLocaleString();
       }catch(e){setST('err');}
-      svb.disabled=false;svb.textContent='Save roster';
-      renderMainCard();
+      svb.disabled=(state.sel.size!==7);
+      svb.textContent='Save roster';
     };
   }
-
-  renderMainCard();
 }
 
 function setST(s){var w=document.getElementById('stw');if(!w)return;if(s==='p')w.innerHTML='<span class="st p">Saving...</span>';else if(s==='ok')w.innerHTML='<span class="st ok">&#10003; Saved</span>';else w.innerHTML='<span class="st err">Save failed</span>';}
