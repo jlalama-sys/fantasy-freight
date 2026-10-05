@@ -114,11 +114,68 @@ var state={user:null,admin:false,pending:null,week:CW,sel:new Set(),init:false,i
 var app=document.getElementById('app');
 
 async function h256(s){var b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0');}).join('');}
-function jsonp(p){return new Promise(function(res,rej){var cb='ff_'+Math.random().toString(36).slice(2);var url=API_URL+'?callback='+cb+'&payload='+encodeURIComponent(JSON.stringify(p));window[cb]=function(d){delete window[cb];if(sc.parentNode)document.body.removeChild(sc);res(d);};var sc=document.createElement('script');sc.src=url;sc.onerror=function(){delete window[cb];if(sc.parentNode)document.body.removeChild(sc);rej(new Error('failed'));};document.body.appendChild(sc);});}
-async function api(p){return jsonp(p);}
+function jsonp(p, timeoutMs) {
+  timeoutMs = timeoutMs || 12000;
+  return new Promise(function(res, rej) {
+    var cb = 'ff_' + Math.random().toString(36).slice(2);
+    var url = API_URL + '?callback=' + cb + '&payload=' + encodeURIComponent(JSON.stringify(p));
+    var done = false;
+    var timer = setTimeout(function() {
+      if (done) return; done = true;
+      delete window[cb];
+      if (sc.parentNode) document.body.removeChild(sc);
+      rej(new Error('timeout'));
+    }, timeoutMs);
+    window[cb] = function(d) {
+      if (done) return; done = true;
+      clearTimeout(timer);
+      delete window[cb];
+      if (sc.parentNode) document.body.removeChild(sc);
+      res(d);
+    };
+    var sc = document.createElement('script');
+    sc.src = url;
+    sc.onerror = function() {
+      if (done) return; done = true;
+      clearTimeout(timer);
+      delete window[cb];
+      if (sc.parentNode) document.body.removeChild(sc);
+      rej(new Error('failed'));
+    };
+    document.body.appendChild(sc);
+  });
+}
+// Retry wrapper: tries up to maxAttempts times with exponential backoff
+async function api(p, maxAttempts) {
+  maxAttempts = maxAttempts || 3;
+  var lastErr;
+  for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await jsonp(p);
+    } catch(e) {
+      lastErr = e;
+      if (attempt < maxAttempts) {
+        // Wait before retry: 1s, 2s, 4s...
+        await new Promise(function(r) { setTimeout(r, Math.pow(2, attempt - 1) * 1000); });
+      }
+    }
+  }
+  throw lastErr;
+}
 
 async function rGet(mgr,wk){var k=mgr+':'+wk;if(state.cache[k]!==undefined)return state.cache[k];try{var r=await api({action:'getRoster',manager:mgr,week:wk});var v=(r.success&&r.reps&&r.reps.length>0)?{reps:r.reps,submittedAt:r.submittedAt}:null;state.cache[k]=v;return v;}catch(e){return null;}}
-async function rSet(mgr,wk,data){state.cache[mgr+':'+wk]=data;var r=await api({action:'saveRoster',manager:mgr,week:wk,reps:data.reps,submittedAt:data.submittedAt});if(!r.success)throw new Error(r.error||'Save failed');}
+async function rSet(mgr, wk, data) {
+  var r = await api({action:'saveRoster', manager:mgr, week:wk, reps:data.reps, submittedAt:data.submittedAt}, 3);
+  if (!r.success) throw new Error(r.error || 'Save failed');
+  // Verify read-back: check saved reps match what we sent
+  var sent = new Set(data.reps);
+  var saved = new Set(r.savedReps || []);
+  var mismatch = data.reps.some(function(x) { return !saved.has(x); }) ||
+                 (r.savedReps && r.savedReps.some(function(x) { return !sent.has(x); }));
+  if (mismatch) throw new Error('Save verification failed — please try again');
+  // Update cache with confirmed data
+  state.cache[mgr+':'+wk] = {reps: r.savedReps || data.reps, submittedAt: data.submittedAt};
+}
 async function allR(){try{var r=await api({action:'getAllRosters'});return r.success?r.rosters:{};}catch(e){return {};}}
 async function getLocks(){try{var r=await api({action:'getLocks'});return r.success?r.locks:{};}catch(e){return {};}}
 async function setLock(wk,locked){try{var r=await api({action:'setLock',week:wk,locked:locked});if(r.success){state.locks[String(wk)]=locked;return true;}return false;}catch(e){return false;}}
@@ -339,6 +396,7 @@ async function rMgr(){
       var ra=Array.from(state.sel),ts=new Date().toISOString();
       setST('p');
       try{
+        setST('p','Saving... (attempt 1)');
         await rSet(mgr,wk,{reps:ra,submittedAt:ts});
         state.cache[mgr+':'+wk]={reps:ra,submittedAt:ts};
         cur={reps:ra,submittedAt:ts};
@@ -354,7 +412,12 @@ async function rMgr(){
   }
 }
 
-function setST(s){var w=document.getElementById('stw');if(!w)return;if(s==='p')w.innerHTML='<span class="st p">Saving...</span>';else if(s==='ok')w.innerHTML='<span class="st ok">&#10003; Saved</span>';else w.innerHTML='<span class="st err">Save failed</span>';}
+function setST(s, msg){
+  var w=document.getElementById('stw'); if(!w)return;
+  if(s==='p') w.innerHTML='<span class="st p">'+(msg||'Saving...')+'</span>';
+  else if(s==='ok') w.innerHTML='<span class="st ok">&#10003; Saved & verified</span>';
+  else w.innerHTML='<span class="st err">&#9888; '+(msg||'Save failed — please retry')+'</span>';
+}
 
 async function rAdmin(){
   var parallel=await Promise.all([getLocks(),allR()]);
@@ -394,4 +457,3 @@ render();
 </script>
 </body>
 </html>
-
