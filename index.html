@@ -105,8 +105,8 @@ var SMALL_THRESHOLD=14;
 var TOTAL_WEEKS=7;
 var PLAYOFF_WEEK=7;
 function inWeek(mgr,wk){return wk<PLAYOFF_WEEK||!!(SCH[mgr]&&SCH[mgr][String(wk)]);}
-function wkLabel(w){return w>=PLAYOFF_WEEK?'PO':'WK'+w;}
-function wkShort(w){return w>=PLAYOFF_WEEK?'PO':String(w);}
+function wkLabel(w){return w>=PLAYOFF_WEEK?'QF':'WK'+w;}
+function wkShort(w){return w>=PLAYOFF_WEEK?'QF':String(w);}
 var SEASON_START=new Date('2026-09-21T00:00:00');
 var API_URL='https://script.google.com/macros/s/AKfycbwW24nLEYDLeIGtbOWusUPtyR10aXDYOctsV3CooVITTkdaMTJRHvbVUpfhdcOVpBg/exec';
 var ADMIN_HASH='a4cf5e703ea05d936c9ce640e30f76595eb6d9837db27bea18510f16d55884c7';
@@ -392,14 +392,14 @@ async function rMgr(){
 
   var sc0=state.sel.size;
   document.getElementById('mc').innerHTML=
-    '<div class="matchup">'+(opp?'<b>Week '+wk+'</b> &middot; vs <b>'+opp.opponent+'</b>'+(wk>=PLAYOFF_WEEK?' <span class="vs">&#127942; PLAYOFFS &middot; ROUND 1</span>':opp.division&&opp.division.indexOf('RIVALRY')>=0?' <span class="vs">&#9876; RIVALRY</span>':''):'<b>Week '+wk+'</b>')+'</div>'+
+    '<div class="matchup">'+(opp?'<b>Week '+wk+'</b> &middot; vs <b>'+opp.opponent+'</b>'+(wk>=PLAYOFF_WEEK?' <span class="vs">&#127942; QUARTERFINAL</span>':opp.division&&opp.division.indexOf('RIVALRY')>=0?' <span class="vs">&#9876; RIVALRY</span>':''):'<b>Week '+wk+'</b>')+'</div>'+
     (weekLocked?'<div class="notice-bad">&#128274; Week '+wk+' locked by admin. Contact JLALAMA or ATUCKER for changes.</div>':'')+
     (!weekLocked?'<div class="hint" style="margin-bottom:6px;font-size:12px;">&#128274; Rosters will be locked by admins on Thursdays @ 15:00.</div>':'')+
     (!weekLocked&&wk<PLAYOFF_WEEK?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#9432; All reps must play at least once before you can re-select a rep who has already played.</div>':'')+
     (!weekLocked&&!isSmall&&lastWeekReps.size>0&&unplayed.length===0?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#9432; Grayed-out reps played last week and cannot be re-selected.</div>':'')+
     (isSmall&&!weekLocked&&wk<PLAYOFF_WEEK?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#127919; Small roster: consecutive-week repeat rule waived for your team.</div>':'')+
-    (!weekLocked&&wk>=PLAYOFF_WEEK?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#127942; Playoffs: roster rules have reset &mdash; your whole team is eligible. Select any 7 reps.</div>':'')+
-    (CW>=PLAYOFF_WEEK&&!inWeek(mgr,PLAYOFF_WEEK)?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#127942; Your team is not in this playoff round.</div>':'')+
+    (!weekLocked&&wk>=PLAYOFF_WEEK?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#127942; Quarterfinals: roster rules have reset &mdash; your whole team is eligible. Select any 7 reps.</div>':'')+
+    (CW>=PLAYOFF_WEEK&&!inWeek(mgr,PLAYOFF_WEEK)?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#127942; Your team is not in the quarterfinals.</div>':'')+
     '<div class="rl" id="replist"></div>'+
     '<div class="cnt '+(sc0===7?'ok':'w')+'" id="cntEl">'+sc0+' / 7 selected</div>'+
     '<div class="fr"><div>'+(cur?'<span class="hint">Last saved: '+new Date(cur.submittedAt).toLocaleString()+'</span>':'<span class="hint">Not submitted yet</span>')+'<div id="stw"></div></div>'+
