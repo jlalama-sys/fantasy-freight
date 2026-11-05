@@ -104,6 +104,7 @@ var MPH={"AROGERS":"c66f1f34f49381e467d3abd43c77947f5d1dd362fd0eec6c2c1f27233ae9
 var SMALL_THRESHOLD=14;
 var TOTAL_WEEKS=8;
 var PLAYOFF_WEEK=7;
+var REPEAT_RULE_FROM=8; // semifinal onward: reps from last round are blocked
 function inWeek(mgr,wk){return wk<PLAYOFF_WEEK||!!(SCH[mgr]&&SCH[mgr][String(wk)]);}
 function roundName(w){return w===7?'Quarterfinal':w===8?'Semifinal':w===9?'Final':'Playoffs';}
 function wkLabel(w){return w===7?'QF':w===8?'SF':w===9?'F':'WK'+w;}
@@ -204,6 +205,21 @@ function getUnplayedReps(mgr,wk){
 
 // Core chip state logic — pure function, no DOM side effects
 // Returns for each rep: {locked, checked}
+// Semifinal+ rule: reps who played last round are blocked. If a team has fewer than
+// 7 other reps, it must pick ALL of the others first, then may fill with repeaters.
+// Removes any selected repeater that breaks that rule. Returns true if it changed sel.
+function reconcileSel(mgr,wk,sel,lastWeekReps){
+  if(wk<REPEAT_RULE_FROM||!lastWeekReps.size)return false;
+  var allReps=RBM[mgr]||[];
+  var nonRepeat=allReps.filter(function(r){return !lastWeekReps.has(r);});
+  var allowRepeaters=nonRepeat.length<7&&nonRepeat.every(function(r){return sel.has(r);});
+  var changed=false;
+  if(!allowRepeaters){
+    lastWeekReps.forEach(function(r){if(sel.has(r)){sel.delete(r);changed=true;}});
+  }
+  return changed;
+}
+
 function computeChipStates(mgr,wk,sel,isSmall,weekLocked,lastWeekReps,unplayed){
   var allReps=RBM[mgr]||[];
   var unplayedSet=new Set(unplayed);
@@ -212,6 +228,11 @@ function computeChipStates(mgr,wk,sel,isSmall,weekLocked,lastWeekReps,unplayed){
 
   // Are ALL unplayed reps currently selected?
   var allUnplayedSel=hasUnplayedRestriction&&unplayed.every(function(r){return sel.has(r);});
+
+  // Semifinal+ strict repeat rule
+  var strict=wk>=REPEAT_RULE_FROM;
+  var nonRepeatAll=allReps.filter(function(r){return !lastWeekReps.has(r);});
+  var allowRepeaters=strict&&nonRepeatAll.length<7&&nonRepeatAll.every(function(r){return sel.has(r);});
 
   var states={};
   allReps.forEach(function(rep){
@@ -225,12 +246,18 @@ function computeChipStates(mgr,wk,sel,isSmall,weekLocked,lastWeekReps,unplayed){
       locked=false;
     } else {
       // Unselected reps:
-      // 1. Last week rule (small teams exempt)
-      if(!isSmall&&lastWeekReps.has(rep)){locked=true;}
-      // 2. Unplayed cycle rule (applies to ALL teams including small)
-      else if(hasUnplayedRestriction&&!allUnplayedSel&&!unplayedSet.has(rep)){locked=true;}
-      // 3. 7 already selected — gray out remaining
-      else if(selCount>=7){locked=true;}
+      if(strict){
+        // Semifinal+: last-round reps blocked unless team must use them to reach 7
+        if(lastWeekReps.has(rep)&&!allowRepeaters){locked=true;}
+      } else if(!isSmall&&lastWeekReps.has(rep)){
+        // 1. Last week rule (small teams exempt in regular season)
+        locked=true;
+      } else if(hasUnplayedRestriction&&!allUnplayedSel&&!unplayedSet.has(rep)){
+        // 2. Unplayed cycle rule (applies to ALL teams including small)
+        locked=true;
+      }
+      // 3. 7 already selected - gray out remaining
+      if(!locked&&selCount>=7){locked=true;}
     }
     states[rep]={locked:locked,checked:ck};
   });
@@ -353,11 +380,16 @@ async function rMgr(){
 
   var lastWeekReps=new Set();
   // Small teams skip the last-week rule ONLY
-  if(!isSmall&&wk<PLAYOFF_WEEK&&prev&&prev.reps)prev.reps.forEach(function(r){lastWeekReps.add(r);});
+  if(prev&&prev.reps&&((wk<PLAYOFF_WEEK&&!isSmall)||wk>=REPEAT_RULE_FROM))prev.reps.forEach(function(r){lastWeekReps.add(r);});
 
   var unplayed=wk>=PLAYOFF_WEEK?[]:getUnplayedReps(mgr,wk);
 
-  if(!state.init||state.initWk!==wk){state.sel=new Set(cur?cur.reps:[]);state.init=true;state.initWk=wk;}
+  var removedNote=false;
+  if(!state.init||state.initWk!==wk){
+    state.sel=new Set(cur?cur.reps:[]);state.init=true;state.initWk=wk;
+    removedNote=reconcileSel(mgr,wk,state.sel,lastWeekReps);
+  }
+  var needRepeaters=wk>=REPEAT_RULE_FROM&&lastWeekReps.size>0&&(RBM[mgr]||[]).filter(function(r){return !lastWeekReps.has(r);}).length<7;
 
   var opp=SCH[mgr]&&SCH[mgr][String(wk)]?SCH[mgr][String(wk)]:null;
   var sorted=(RBM[mgr]||[]).slice().sort();
@@ -385,6 +417,7 @@ async function rMgr(){
         cb.onchange=function(){
           var r=cb.dataset.r;
           if(cb.checked)state.sel.add(r);else state.sel.delete(r);
+          reconcileSel(mgr,wk,state.sel,lastWeekReps);
           renderChips(); // Only re-render chips, not full card
         };
       });
@@ -397,9 +430,11 @@ async function rMgr(){
     (weekLocked?'<div class="notice-bad">&#128274; Week '+wk+' locked by admin. Contact JLALAMA or ATUCKER for changes.</div>':'')+
     (!weekLocked?'<div class="hint" style="margin-bottom:6px;font-size:12px;">&#128274; Rosters will be locked by admins on Thursdays @ 15:00.</div>':'')+
     (!weekLocked&&wk<PLAYOFF_WEEK?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#9432; All reps must play at least once before you can re-select a rep who has already played.</div>':'')+
-    (!weekLocked&&!isSmall&&lastWeekReps.size>0&&unplayed.length===0?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#9432; Grayed-out reps played last week and cannot be re-selected.</div>':'')+
+    (!weekLocked&&!isSmall&&wk<REPEAT_RULE_FROM&&lastWeekReps.size>0&&unplayed.length===0?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#9432; Grayed-out reps played last week and cannot be re-selected.</div>':'')+
     (isSmall&&!weekLocked&&wk<PLAYOFF_WEEK?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#127919; Small roster: consecutive-week repeat rule waived for your team.</div>':'')+
-    (!weekLocked&&wk>=PLAYOFF_WEEK?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#127942; '+roundName(wk)+': roster rules have reset &mdash; your whole team is eligible. Select any 7 reps.</div>':'')+
+    (!weekLocked&&wk>=PLAYOFF_WEEK&&wk<REPEAT_RULE_FROM?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#127942; '+roundName(wk)+': roster rules have reset &mdash; your whole team is eligible. Select any 7 reps.</div>':'')+
+    (!weekLocked&&wk>=REPEAT_RULE_FROM?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#127942; '+roundName(wk)+': reps who played last round are grayed out and cannot be re-selected.'+(needRepeaters?' Your team has fewer than 7 other reps &mdash; select all of them first, then fill the remaining spots with reps from last round.':'')+'</div>':'')+
+    (removedNote&&!weekLocked?'<div class="hint" style="margin-bottom:10px;font-size:12px;color:var(--warn);">&#9888; Your saved roster included reps from last round. They were removed &mdash; please reselect and save again.</div>':'')+
     (CW>=PLAYOFF_WEEK&&!inWeek(mgr,CW)?'<div class="hint" style="margin-bottom:10px;font-size:12px;">&#127942; Your team is not in the '+roundName(CW).toLowerCase()+'s.</div>':'')+
     '<div class="rl" id="replist"></div>'+
     '<div class="cnt '+(sc0===7?'ok':'w')+'" id="cntEl">'+sc0+' / 7 selected</div>'+
