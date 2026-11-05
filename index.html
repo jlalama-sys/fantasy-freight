@@ -106,6 +106,7 @@ var TOTAL_WEEKS=8;
 var PLAYOFF_WEEK=7;
 var REPEAT_RULE_FROM=8; // semifinal onward: reps from last round are blocked
 function inWeek(mgr,wk){return wk<PLAYOFF_WEEK||!!(SCH[mgr]&&SCH[mgr][String(wk)]);}
+function latestWeek(mgr){for(var w=TOTAL_WEEKS;w>1;w--){if(inWeek(mgr,w))return w;}return 1;}
 function roundName(w){return w===7?'Quarterfinal':w===8?'Semifinal':w===9?'Final':'Playoffs';}
 function wkLabel(w){return w===7?'QF':w===8?'SF':w===9?'F':'WK'+w;}
 function wkShort(w){return w>=PLAYOFF_WEEK?wkLabel(w):String(w);}
@@ -300,7 +301,7 @@ function rPin(){
     var h=await h256(v);
     var ok=state.pending==='ADMIN'?h===ADMIN_HASH:h===MPH[state.pending];
     if(ok){
-      state.user=state.pending;state.admin=state.pending==='ADMIN';state.pending=null;state.tries=0;state.week=CW;state.init=false;
+      state.user=state.pending;state.admin=state.pending==='ADMIN';state.pending=null;state.tries=0;state.week=latestWeek(state.user);state.init=false;
       app.innerHTML='<div class="lw"><div class="lb"><div class="ll"><img src="'+LOGO+'" alt="FF" style="width:80px;height:80px;"/><h1 style="font-family:Oswald,sans-serif;font-size:20px;text-transform:uppercase;margin:12px 0 4px;">Loading...</h1><div style="color:var(--dim);font-size:13px;">Fetching your data</div></div></div></div>';
       state.locks=await getLocks();render();
     } else {
